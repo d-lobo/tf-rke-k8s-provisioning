@@ -2,3 +2,5 @@
 *.hcl
 *.tfstate
 *.tfstate.backup
+kube_config_cluster.yml
+
