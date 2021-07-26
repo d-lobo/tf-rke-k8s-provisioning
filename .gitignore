@@ -1,6 +1,6 @@
 .terraform
 *.hcl
 *.tfstate
-*.tfstate.backup
+*.backup
+*.info
 kube_config_cluster.yml
-
