@@ -23,8 +23,8 @@ otherwise use `eval $(ssh-agent)` in shell.
 * type `terraform apply` to apply the actual plan
 
 ## Credentials & Access cluster with `kubectl`
-Once the plan has been successfully applied, terraform creates a ready-2-use kubeconfig to access the cluster. `kube_config_cluster.yaml`
-Use it, like e.g. `kubectl --kubeconfig kube_config_cluster.yaml get pods --all-namespaces` or set environment to point to the file.
+Once the plan has been successfully applied, terraform creates a ready-2-use kubeconfig (`kube_config_cluster.yaml`) to access the cluster.
+Use it, like e.g. `kubectl --kubeconfig kube_config_cluster.yaml get pods --all-namespaces` or set env to point to the file.
 
 ## Get bearer token of dashboard admin account; proxy & access dashboard
 

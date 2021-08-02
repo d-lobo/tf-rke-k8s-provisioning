@@ -1,0 +1,62 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pers-vol
+  labels:
+    type: local
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 2Gi
+  hostPath:
+    path: "/tmp"
+---
+apiVersion: registry.mgoltzsche.github.com/v1alpha1
+kind: ImageRegistry
+metadata:
+  name: registry
+spec:
+  replicas: 1
+  tls: {}
+  # You may want to specify the TLS certificate
+  # by either providing a secret or referring to a cert-manager issuer:
+  #  secretName: my-registry-tls
+  #  issuerRef:
+  #    name: my-lets-encrypt-issuer
+  #    kind: Issuer
+  persistentVolumeClaim:
+    # You may want to use a different StorageClass here:
+    storageClassName: ""
+    accessModes:
+    - ReadWriteOnce # If >1 replicas ever required ReadWriteMany must be set (which is the default)
+    resources:
+      requests:
+        storage: 1Gi
+---
+apiVersion: registry.mgoltzsche.github.com/v1alpha1
+kind: ImagePushSecret
+metadata:
+  name: example
+spec:
+  registryRef: # when omitted operator's default registry is used
+    name: registry
+    #namespace: infra # another namespace's registry could be used
+---
+apiVersion: registry.mgoltzsche.github.com/v1alpha1
+kind: ImagePullSecret
+metadata:
+  name: example
+spec:
+  registryRef:
+    name: registry
+---
+apiVersion: registry.mgoltzsche.github.com/v1alpha1
+kind: ImageBuildEnv
+metadata:
+  name: example
+spec:
+  redis: true
+  secrets:
+  - secretName: imagepushsecret-example

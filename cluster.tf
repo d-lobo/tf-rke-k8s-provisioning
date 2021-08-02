@@ -8,6 +8,10 @@ terraform {
      source = "hashicorp/kubernetes"
      version = "2.3.2"
    }
+    kubectl = {
+     source  = "gavinbunney/kubectl"
+     version = ">= 1.7.0"
+    }
   }
 }
 
@@ -19,6 +23,15 @@ provider "rke" {
 provider "kubernetes" {
   host     = "${rke_cluster.cluster.api_server_url}"
   username = "${rke_cluster.cluster.kube_admin_user}"
+
+  client_certificate     = "${rke_cluster.cluster.client_cert}"
+  client_key             = "${rke_cluster.cluster.client_key}"
+  cluster_ca_certificate = "${rke_cluster.cluster.ca_crt}"
+}
+
+provider "kubectl" {
+  load_config_file       = false
+  host     = "${rke_cluster.cluster.api_server_url}"
 
   client_certificate     = "${rke_cluster.cluster.client_cert}"
   client_key             = "${rke_cluster.cluster.client_key}"
@@ -46,7 +59,7 @@ resource rke_cluster "cluster" {
        "https://raw.githubusercontent.com/kubernetes/dashboard/v2.2.0/aio/deploy/recommended.yaml",
        "yaml/dashboard-admin-user.yaml",
        "yaml/namespaces.yaml",
-       "yaml/example-apps.yaml"
+       "yaml/example-apps.yaml",
   ]
 
   ssh_agent_auth = true
@@ -55,4 +68,39 @@ resource rke_cluster "cluster" {
 resource "local_file" "kube_cluster_yaml" {
    filename = "${path.root}/kube_config_cluster.yml"
    content  = rke_cluster.cluster.kube_config_yaml
+}
+
+resource "null_resource" "image-registry-crd-operator" {
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "Executing kubectl -k on image-regsitry-operator"
+      kubectl --kubeconfig kube_config_cluster.yml apply -k github.com/mgoltzsche/image-registry-operator/deploy/cluster-wide?ref=v0.1.0
+    EOT
+  }
+
+  depends_on = [
+    local_file.kube_cluster_yaml,
+  ]
+}
+
+data "kubectl_file_documents" "manifests" {
+    content = file("./yaml/image-registry.yaml")
+}
+
+resource "kubectl_manifest" "test" {
+    count     = length(data.kubectl_file_documents.manifests.documents)
+    yaml_body = element(data.kubectl_file_documents.manifests.documents, count.index)
+}
+
+resource "null_resource" "image-registry-pods" {
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "Executing kubectl -f on image-registry-pods"
+      kubectl --kubeconfig kube_config_cluster.yml apply -f yaml/image-registry.yaml
+    EOT
+  }
+
+  depends_on = [
+    kubectl_manifest.test,
+  ]
 }
